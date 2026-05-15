@@ -1401,6 +1401,7 @@ export default function App() {
   const [currentUser, setCurrentUser] = useState<SystemUser | null>(null);
   const [sales, setSales] = useState<Sale[]>([]);
   const [systemPaths, setSystemPaths] = useState<any>(null);
+  const [resetClickCount, setResetClickCount] = useState(0);
   const isElectron = !!(window as any).electronAPI;
 
   useEffect(() => {
@@ -1429,6 +1430,38 @@ export default function App() {
   }, []);
 
   const [orderCounter, setOrderCounter] = useState<number>(() => carregarDados(STORAGE_KEYS.ORDER_COUNTER, 0));
+
+  const handleResetClick = () => {
+    if (isLogged) return; // Só funciona na tela de login
+    
+    setResetClickCount(prev => {
+      const newVal = prev + 1;
+      if (newVal >= 5) {
+        if (window.confirm("🚨 RESET DE EMERGÊNCIA 🚨\n\nIsso apagará TODOS os dados locais (Usuários, Vendas, Configurações) para restaurar o acesso padrão (admin/ADM1234).\n\nDESEJA CONTINUAR?")) {
+          // Limpa LocalStorage
+          localStorage.clear();
+          
+          // Limpa IndexedDB via Dexie
+          import('./lib/db').then(async ({ db }) => {
+            try {
+              await db.delete();
+              alert("Sistema resetado com sucesso! O aplicativo será reiniciado.");
+              window.location.reload();
+            } catch (err) {
+              console.error("Erro ao deletar banco:", err);
+              // Fallback se falhar o delete()
+              alert("Erro ao limpar banco de dados. Por favor, apague a pasta indicada manualmente.");
+            }
+          });
+        }
+        return 0;
+      }
+      return newVal;
+    });
+
+    // Resetar o contador se ficar parado por muito tempo
+    setTimeout(() => setResetClickCount(0), 5000);
+  };
 
   const [view, setView] = useState<View>(() => {
     // Check if ADM is already set up in users
@@ -4405,7 +4438,10 @@ useEffect(() => {
                  ) : (
                  <>
                  <div className="relative">
-                    <div className="relative w-40 h-40 bg-gradient-to-br from-purple-600/20 to-blue-600/20 backdrop-blur-3xl rounded-full flex items-center justify-center text-white border border-white/10 shadow-[0_0_30px_rgba(168,85,247,0.3)] overflow-hidden">
+                    <div 
+                        onClick={handleResetClick}
+                        className="relative w-40 h-40 bg-gradient-to-br from-purple-600/20 to-blue-600/20 backdrop-blur-3xl rounded-full flex items-center justify-center text-white border border-white/10 shadow-[0_0_30px_rgba(168,85,247,0.3)] overflow-hidden cursor-pointer hover:scale-105 active:scale-95 transition-transform"
+                    >
                        {company.logo ? (
                           <img src={company.logo} className="w-26 h-26 object-contain drop-shadow-[0_0_15px_rgba(168,85,247,0.4)]" alt="Logo" />
                        ) : (
