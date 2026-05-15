@@ -1400,6 +1400,34 @@ export default function App() {
   const [roles, setRoles] = useState<Role[]>(() => carregarDados(STORAGE_KEYS.ROLES, INITIAL_ROLES));
   const [currentUser, setCurrentUser] = useState<SystemUser | null>(null);
   const [sales, setSales] = useState<Sale[]>([]);
+  const [systemPaths, setSystemPaths] = useState<any>(null);
+  const isElectron = !!(window as any).electronAPI;
+
+  useEffect(() => {
+    const fetchPaths = async () => {
+      if ((window as any).electronAPI) {
+        try {
+          const paths = await (window as any).electronAPI.getSystemPaths();
+          setSystemPaths(paths);
+          logger.info('Caminhos do Sistema Electron carregados.', paths, 'Sistema');
+          
+          // Log extra claro conforme pedido
+          console.group('%c[DIAGNÓSTICO DESKTOP]', 'color: #a855f7; font-weight: bold; font-size: 14px;');
+          console.log('Caminho do banco (Chromium UserData):', paths.userData);
+          console.log('Caminho da aplicação (EXE):', paths.exe);
+          console.log('Caminho do storage de log:', paths.logPath);
+          console.log('Caminho de backups em documentos:', paths.documentsBackupDir);
+          console.log('Backup principal (AppData):', paths.backupPath);
+          console.log('DICA: Para resetar COMPLETAMENTE o sistema, apague a pasta em UserData.');
+          console.groupEnd();
+        } catch (err) {
+          console.error("Erro ao carregar caminhos do sistema:", err);
+        }
+      }
+    };
+    fetchPaths();
+  }, []);
+
   const [orderCounter, setOrderCounter] = useState<number>(() => carregarDados(STORAGE_KEYS.ORDER_COUNTER, 0));
 
   const [view, setView] = useState<View>(() => {
@@ -3615,7 +3643,27 @@ useEffect(() => {
       // Pequeno delay artificial para evitar spam e mostrar feedback visual de carregamento
       await new Promise(resolve => setTimeout(resolve, 800));
 
-      const admUser = users.find(u => u.id === 'admin');
+      // Busca usuários especificamente do storage seguro
+      const usersFromStorage = await carregarDadosAsync<SystemUser[]>(STORAGE_KEYS.USERS, []);
+      
+      logger.info('Iniciando validação de credenciais...', { 
+        totalUsersFound: usersFromStorage.length,
+        isElectron: !!(window as any).electronAPI,
+        source: 'IndexedDB/LocalStorage'
+      }, 'Auth');
+
+      const admUser = usersFromStorage.find(u => u.id === 'admin' || (u.username && (u.username.toUpperCase() === 'ADM' || u.username.toLowerCase() === 'admin')));
+      
+      if (admUser) {
+        logger.info('Administrador mestre identificado na base de dados.', { 
+          id: admUser.id, 
+          username: admUser.username,
+          hasPassword: !!admUser.password 
+        }, 'Auth');
+      } else {
+        logger.warn('AVISO: Nenhum administrador mestre foi encontrado na base de dados local!', null, 'Auth');
+      }
+
       const isAdmAttempt = 
         loginUsername.toUpperCase() === 'ADM' || 
         loginUsername.toLowerCase() === 'admin' ||
@@ -3626,7 +3674,7 @@ useEffect(() => {
         return;
       }
 
-      const user = users.find(u => 
+      const user = usersFromStorage.find(u => 
         (u.username && u.username.toUpperCase() === loginUsername.toUpperCase()) && 
         verifyPassword(loginPassword, u.password || '')
       );
@@ -4366,6 +4414,15 @@ useEffect(() => {
                           </div>
                        )}
                     </div>
+                    {/* Diagnostic info for Electron */}
+                    {isElectron && systemPaths && (
+                      <div className="absolute -bottom-4 left-1/2 -translate-x-1/2 whitespace-nowrap bg-black/60 backdrop-blur-md px-3 py-1 rounded-full border border-purple-500/30 shadow-lg z-20">
+                        <p className="text-[9px] font-mono text-purple-300/80 flex items-center gap-1.5">
+                          <Database className="w-2.5 h-2.5" />
+                          Storage: <span className="text-white/60 select-all">{systemPaths.userData}</span>
+                        </p>
+                      </div>
+                    )}
                  </div>
                  <div className="text-center space-y-2">
                     <h2 className="text-3xl font-black text-white uppercase tracking-tighter leading-none">{company.name || 'Acesso Seguro'}</h2>

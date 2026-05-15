@@ -293,6 +293,7 @@ export async function carregarDadosAsync<T>(key: string, defaultValue: T): Promi
       else if (key === STORAGE_KEYS.CLOSED_SESSIONS) dbData = await db.cashier_sessions.where('status').equals('closed').toArray();
       
       if (dbData && Array.isArray(dbData) && dbData.length > 0) {
+        logger.info(`Dados de "${key}" carregados do IndexedDB.`, { count: dbData.length }, 'Storage');
         return dbData as unknown as T;
       }
       
@@ -302,6 +303,7 @@ export async function carregarDadosAsync<T>(key: string, defaultValue: T): Promi
         try {
           const parsed = JSON.parse(localData);
           if (parsed && Array.isArray(parsed) && parsed.length > 0) {
+            logger.info(`Dados de "${key}" carregados do LocalStorage (Fallback/Migração).`, { count: parsed.length }, 'Storage');
             // Migra para o IndexedDB em background
             salvarDados(key, parsed);
             return parsed as T;
@@ -313,7 +315,12 @@ export async function carregarDadosAsync<T>(key: string, defaultValue: T): Promi
     }
 
     // 2. Fallback ou Carregamento Padrão via LocalStorage
-    return carregarDados(key, defaultValue);
+    const finalResult = carregarDados(key, defaultValue);
+    if (finalResult && (Array.isArray(finalResult) ? finalResult.length > 0 : true) && finalResult !== defaultValue) {
+       // Apenas loga se houver dados reais (não o default)
+       // Note: carregarDados já usa localStorage.getItem
+    }
+    return finalResult;
   } catch (error) {
     logger.error(`Erro ao carregar dados async da chave "${key}":`, error, 'Storage');
     return defaultValue;

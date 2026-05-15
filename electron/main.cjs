@@ -390,6 +390,18 @@ ipcMain.handle('quit-app', () => {
   app.quit();
 });
 
+ipcMain.handle('get-system-paths', () => {
+  return {
+    userData: app.getPath('userData'),
+    documents: app.getPath('documents'),
+    backupPath: backupPath,
+    documentsBackupDir: documentsBackupDir,
+    logPath: logPath,
+    temp: app.getPath('temp'),
+    exe: app.getPath('exe')
+  };
+});
+
 ipcMain.handle('check-for-updates', async () => {
   console.log('[Electron] [IPC] check-for-updates chamado');
   if (isDev) return { success: false, message: 'Não disponível em modo desenvolvimento' };

@@ -8,6 +8,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   getPrinters: () => ipcRenderer.invoke('get-printers'),
   print: (content, options) => ipcRenderer.invoke('print', content, options),
   getAppVersion: () => ipcRenderer.invoke('get-app-version'),
+  getSystemPaths: () => ipcRenderer.invoke('get-system-paths'),
   writeLog: (logEntry) => ipcRenderer.invoke('write-log', logEntry),
   checkForUpdates: () => ipcRenderer.invoke('check-for-updates'),
   downloadUpdate: () => ipcRenderer.invoke('download-update'),
