@@ -74,6 +74,18 @@ import { ProductLocationView } from './components/ProductLocationView';
 
 import { backupService } from './services/backupService';
 import { logger } from './lib/logger';
+import { 
+  initializeAuth, 
+  login as performLogin, 
+  logout as performLogout, 
+  changePassword as performChangePassword, 
+  resetAdmin as performResetAdmin,
+  createUser as performCreateUser,
+  updateUser as performUpdateUser,
+  deleteUser as performDeleteUser,
+  checkPassword as performCheckPassword,
+  type SystemUser
+} from './lib/auth';
 
 const noScrollbarStyle = `
   .no-scrollbar::-webkit-scrollbar { display: none; }
@@ -513,17 +525,6 @@ interface LabelConfig {
   vGap?: number;
 }
 
-interface SystemUser extends SyncableEntity {
-  username: string;
-  name: string;
-  password?: string;
-  roleId?: string;
-  isActive?: boolean;
-  deactivatedAt?: string;
-  isFirstAccess?: boolean;
-  masterCode?: string;
-}
-
 type AccessLevel = 'total' | 'limitado' | 'nenhum';
 
 interface Emoji {
@@ -590,10 +591,7 @@ interface ModulePermissions {
 
 const isUserAdmin = (user: SystemUser | null, roles?: Role[]) => {
   if (!user) return false;
-  const isMaster = user.id === 'admin' || user.username?.toUpperCase() === 'ADM';
-  if (isMaster) return true;
-  if (!roles) return false;
-  return roles.find(r => r.id === user.roleId)?.name.toLowerCase() === 'administrador';
+  return user.id === 'admin' || user.username?.toUpperCase() === 'ADM';
 };
 
 const DEFAULT_ACTIONS: ModuleActions = {
@@ -1277,128 +1275,25 @@ export const getPrintIcon = (printMode: string, iconSize: number = 18) => {
   return printMode === 'browser' ? <FileText size={iconSize} /> : <Printer size={iconSize} />;
 };
 
-function hashString(str: string) {
-  let hash = 0;
-  if (str.length === 0) return '0';
-  for (let i = 0; i < str.length; i++) {
-    const char = str.charCodeAt(i);
-    hash = ((hash << 5) - hash) + char;
-    hash = hash & hash; // Convert to 32bit integer
-  }
-  return Math.abs(hash).toString(16);
-}
-
-function secureHash(str: string) { return `h:${hashString(str)}`; }
-function isHashed(str: string) { return str ? str.startsWith('h:') : false; }
-function verifyPassword(input: string, stored: string) {
-  if (!stored) return false;
-  if (isHashed(stored)) {
-    return secureHash(input) === stored;
-  }
-  return input === stored;
-}
-
 export default function App() {
-  // --- Surgically clean test data for production (One-time execution) ---
-  useEffect(() => {
-    const SYSTEM_VERSION_KEY = '__SYSTEM_CLEANED_PROD_V6__';
-    const isCleaned = localStorage.getItem(SYSTEM_VERSION_KEY);
-
-    if (!isCleaned) {
-      const performSurgicalCleanup = async () => {
-        console.log('[PROD] Iniciando limpeza cirúrgica de dados de teste...');
-        
-        try {
-          // Identify Admin from localStorage directly
-          const storedUsersRaw = localStorage.getItem(STORAGE_KEYS.USERS);
-          let adminUser = null;
-          if (storedUsersRaw) {
-            try {
-              const storedUsers = JSON.parse(storedUsersRaw);
-              adminUser = storedUsers.find((u: any) => u.id === 'admin' || (u.username && (u.username.toUpperCase() === 'ADM' || u.username.toLowerCase() === 'admin')));
-            } catch (e) {
-              console.error('Error parsing users for cleanup', e);
-            }
-          }
-
-          // Tables to clear in IndexedDB (Dexie)
-          const tablesToClear = [
-            'products', 'customers', 'sales', 'activities', 
-            'revenues', 'purchases', 'expenses', 'raw_materials', 
-            'product_recipes', 'stock_moves', 'deliveries',
-            'shopkeepers', 'shopkeeper_deliveries', 'calculator_materials',
-            'calculator_projects', 'cashier_sessions', 'pre_orders',
-            'categories', 'subcategories', 'product_locations', 'stock_inventories'
-          ];
-
-          for (const table of tablesToClear) {
-            if ((db as any)[table]) {
-              try {
-                await (db as any)[table].clear();
-              } catch (e) {
-                console.warn(`Could not clear table ${table}`, e);
-              }
-            }
-          }
-
-          // LocalStorage keys to clear
-          const keysToClear = [
-            STORAGE_KEYS.PRODUCTS, STORAGE_KEYS.SALES, STORAGE_KEYS.CUSTOMERS, 
-            STORAGE_KEYS.CATEGORIES, STORAGE_KEYS.SUBCATEGORIES,
-            STORAGE_KEYS.CLOSED_SESSIONS, STORAGE_KEYS.CASHIER_SESSION, 
-            STORAGE_KEYS.OPEN_SESSIONS, STORAGE_KEYS.ACTIVITIES,
-            STORAGE_KEYS.REVENUES, STORAGE_KEYS.PURCHASES, STORAGE_KEYS.EXPENSES,
-            STORAGE_KEYS.INVENTORIES, STORAGE_KEYS.PRODUCT_RECIPES,
-            STORAGE_KEYS.RAW_MATERIALS, STORAGE_KEYS.CATALOG_DESCRIPTIONS, 
-            STORAGE_KEYS.SHOPKEEPERS, STORAGE_KEYS.SHOPKEEPER_DELIVERIES, 
-            STORAGE_KEYS.CALCULATOR_MATERIALS, STORAGE_KEYS.CALCULATOR_PROJECTS,
-            STORAGE_KEYS.PRE_ORDERS, STORAGE_KEYS.LABEL_LOT, 
-            STORAGE_KEYS.PRODUCT_LOCATIONS, STORAGE_KEYS.ORDER_COUNTER
-          ];
-
-          keysToClear.forEach(key => localStorage.removeItem(key));
-
-          // Restore Admin User if found, otherwise bootstrap default
-          if (adminUser) {
-            logger.info('Administrador encontrado na limpeza cirúrgica.', { username: adminUser.username }, 'Setup');
-            localStorage.setItem(STORAGE_KEYS.USERS, JSON.stringify([adminUser]));
-          } else {
-            logger.warn('Administrador não encontrado na limpeza. Criando administrador padrão...', null, 'Setup');
-            const defaultAdmin = {
-              id: 'admin',
-              username: 'admin',
-              name: 'Administrador Mestre',
-              password: secureHash('ADM1234'),
-              roleId: 'role-gerente',
-              isActive: true,
-              isFirstAccess: true,
-              createdAt: Date.now(),
-              updatedAt: Date.now()
-            };
-            localStorage.setItem(STORAGE_KEYS.USERS, JSON.stringify([defaultAdmin]));
-            logger.info('Administrador padrão criado com sucesso durante a limpeza.', { username: 'admin' }, 'Setup');
-          }
-
-          // Mark as cleaned
-          localStorage.setItem(SYSTEM_VERSION_KEY, 'true');
-          console.log('[PROD] Limpeza concluída. Reiniciando para aplicar mudanças...');
-          
-          setTimeout(() => {
-            window.location.reload();
-          }, 800);
-        } catch (err) {
-          console.error('[PROD] Erro crítico na limpeza:', err);
-          localStorage.setItem(SYSTEM_VERSION_KEY, 'error');
-        }
-      };
-
-      performSurgicalCleanup();
-    }
-  }, []);
-
   const [users, setUsers] = useState<SystemUser[]>([]);
   const [roles, setRoles] = useState<Role[]>(() => carregarDados(STORAGE_KEYS.ROLES, INITIAL_ROLES));
   const [currentUser, setCurrentUser] = useState<SystemUser | null>(null);
+
+  // Initialize Auth
+  useEffect(() => {
+    const init = async () => {
+      const { user, roles: loadedRoles } = await initializeAuth();
+      if (user) {
+        setCurrentUser(user);
+        // If user must change password, we'll handle it in the view logic
+      }
+      if (loadedRoles && loadedRoles.length > 0) {
+        setRoles(loadedRoles);
+      }
+    };
+    init();
+  }, []);
   const [sales, setSales] = useState<Sale[]>([]);
   const [systemPaths, setSystemPaths] = useState<any>(null);
   const [resetClickCount, setResetClickCount] = useState(0);
@@ -1432,45 +1327,29 @@ export default function App() {
   const [orderCounter, setOrderCounter] = useState<number>(() => carregarDados(STORAGE_KEYS.ORDER_COUNTER, 0));
 
   const handleResetClick = () => {
-    if (isLogged) return; // Só funciona na tela de login
-    
+    if (isLogged) return; 
+
     setResetClickCount(prev => {
       const newVal = prev + 1;
       if (newVal >= 5) {
-        if (window.confirm("🚨 RESET DE EMERGÊNCIA 🚨\n\nIsso apagará TODOS os dados locais (Usuários, Vendas, Configurações) para restaurar o acesso padrão (admin/ADM1234).\n\nDESEJA CONTINUAR?")) {
-          // Limpa LocalStorage
-          localStorage.clear();
-          
+        if (window.confirm("🚨 RESETAR ADMINISTRADOR 🚨\n\nIsso apagará apenas os usuários e restaurará o acesso ADM / 1234.\n\nProdutos, vendas e clientes serão MANTIDOS.\n\nDESEJA CONTINUAR?")) {
           const performReset = async () => {
-            // Limpa Backups no Electron se disponível
-            if ((window as any).electronAPI?.resetSystem) {
-              await (window as any).electronAPI.resetSystem();
-            }
-
-            // Limpa IndexedDB via Dexie
-            const { db } = await import('./lib/db');
-            try {
-              // Mark as not cleaning during surgical cleanup to avoid interference
-              localStorage.setItem('__SYSTEM_CLEANED_PROD_V6__', 'true');
-              
-              await db.delete();
-              alert("Sistema resetado com sucesso! O aplicativo será reiniciado.");
+            const success = await performResetAdmin();
+            if (success) {
+              alert("Administrador resetado com sucesso!\n\nUse:\nUsuário: ADM\nSenha: 1234");
               window.location.reload();
-            } catch (err) {
-              console.error("Erro ao deletar banco:", err);
-              alert("Ocorreu um erro parcial. Reiniciando para aplicar mudanças do LocalStorage.");
-              window.location.reload();
+            } else {
+              alert("Erro ao resetar administrador.");
             }
           };
-
           performReset();
         }
         return 0;
       }
       return newVal;
     });
-
-    // Resetar o contador se ficar parado por muito tempo
+    
+    // Resetar após 5s
     setTimeout(() => setResetClickCount(0), 5000);
   };
 
@@ -3330,58 +3209,8 @@ useEffect(() => {
     setDeliveryChannels(deliveryChannelsData);
     setDeliveryMethods(deliveryMethodsData);
     setClosedSessions(closedSessionsData);
-    // --- BOOTSTRAP INITIAL DATA ---
-    let validatedUsers = [...usersData];
-    let adminUser = validatedUsers.find(u => u.id === 'admin' || (u.username && (u.username.toUpperCase() === 'ADM' || u.username.toLowerCase() === 'admin')));
-    
-    // Check if initial base doesn't exist or is corrupted (no admin or empty users)
-    if (!adminUser || validatedUsers.length === 0) {
-      logger.warn('Administrador não encontrado no boot. Criando administrador padrão...', null, 'Segurança');
-      const defaultAdmin: SystemUser = {
-        id: 'admin',
-        username: 'admin',
-        name: 'Administrador Mestre',
-        password: secureHash('ADM1234'),
-        roleId: 'role-gerente',
-        isActive: true,
-        isFirstAccess: true,
-        createdAt: Date.now(),
-        updatedAt: Date.now()
-      };
-      validatedUsers = [defaultAdmin];
-      await salvarDadosAsync(STORAGE_KEYS.USERS, validatedUsers);
-      logger.info('Administrador padrão criado com sucesso.', { username: 'admin' }, 'Segurança');
-    } else {
-      logger.info('Administrador encontrado.', { username: adminUser.username }, 'Segurança');
-      // Check for legacy/unhashed password on Master Admin
-      if (!isHashed(adminUser.password || '')) {
-         logger.warn('Senha do Admin não está em formato seguro. Forçando hash.', null, 'Segurança');
-         adminUser.password = secureHash(adminUser.password || 'ADM1234');
-         salvarDados(STORAGE_KEYS.USERS, validatedUsers);
-      }
-    }
-    
-    setUsers(validatedUsers);
     setShopkeepers(shopkeepersData);
     setShopkeeperDeliveries(shopkeeperDeliveriesData);
-    
-    // Auto-cleanup for inactive users (> 15 days)
-    const now = new Date();
-    const fifteenDaysInMs = 15 * 24 * 60 * 60 * 1000;
-    const finalUsers = usersData.filter((u: SystemUser) => {
-      if (!u.isActive && u.deactivatedAt) {
-        const deactivationDate = new Date(u.deactivatedAt);
-        if (now.getTime() - deactivationDate.getTime() > fifteenDaysInMs) {
-          console.log(`[Segurança] Usuário ${u.name} excluído automaticamente por inatividade.`);
-          return false;
-        }
-      }
-      return true;
-    });
-    if (finalUsers.length !== usersData.length) {
-      setUsers(finalUsers);
-    }
-
     setRoles(mergedRoles);
     setPaymentMethods(paymentMethodsData);
     setCustomPaymentMethods(customPaymentMethodsData);
@@ -3471,62 +3300,8 @@ useEffect(() => {
   }
 }, [isLoaded, deliveryMethods.length]);
 
-// Initial Cleanup and Migration
-useEffect(() => {
-  if (isLoaded) {
-    let hasChanges = false;
-    const migratedUsers = users.map(u => {
-      let updated = { ...u };
-      let changed = false;
-      
-      // Migrate password to hash if not already hashed
-      if (u.password && !isHashed(u.password)) {
-        updated.password = secureHash(u.password);
-        changed = true;
-      }
+// Initial Cleanup and Migration removed
 
-      // Migrate existing masterCodes to hash if they are not already hashed
-      // (Older versions saved them as plain text)
-      if (u.id === 'admin' && u.masterCode && !isHashed(u.masterCode)) {
-        updated.masterCode = secureHash(u.masterCode);
-        changed = true;
-      }
-
-      if (changed) hasChanges = true;
-      return updated;
-    });
-
-    if (hasChanges) {
-      setUsers(migratedUsers);
-      console.log("[Segurança] Migração de senhas/chaves concluída.");
-    }
-  }
-}, [isLoaded]);
-
-useEffect(() => {
-  if (!isLoaded) return;
-  
-  // Lógica de auto-exclusão (15 dias de inatividade)
-  const now = Date.now();
-  const fifteenDaysMs = 15 * 24 * 60 * 60 * 1000;
-  const usersToKeep = users.filter(user => {
-    // Não exclui o admin mestre
-    if (user.id === 'admin') return true;
-    
-    if (user.isActive === false && user.deactivatedAt) {
-      const deactivationDate = new Date(user.deactivatedAt).getTime();
-      if (now - deactivationDate > fifteenDaysMs) {
-        console.log(`[Segurança] Removendo permanentemente usuário @${user.username} por inatividade > 15 dias.`);
-        return false;
-      }
-    }
-    return true;
-  });
-
-  if (usersToKeep.length !== users.length) {
-    setUsers(usersToKeep);
-  }
-}, [users, isLoaded]);
 
 useEffect(() => {
   if (!isLoaded || isRestoringRef.current) return;
@@ -3684,105 +3459,37 @@ useEffect(() => {
     setError(null);
 
     try {
-      // Pequeno delay artificial para evitar spam e mostrar feedback visual de carregamento
+      // Pequeno delay artificial para feedback visual
       await new Promise(resolve => setTimeout(resolve, 800));
 
-      // Busca usuários especificamente do storage seguro
-      const usersFromStorage = await carregarDadosAsync<SystemUser[]>(STORAGE_KEYS.USERS, []);
-      
-      logger.info('Iniciando validação de credenciais...', { 
-        totalUsersFound: usersFromStorage.length,
-        isElectron: !!(window as any).electronAPI,
-        source: 'IndexedDB/LocalStorage'
-      }, 'Auth');
+      const { success, user, error: loginError } = await performLogin(loginUsername, loginPassword);
 
-      const admUser = usersFromStorage.find(u => u.id === 'admin' || (u.username && (u.username.toUpperCase() === 'ADM' || u.username.toLowerCase() === 'admin')));
-      
-      if (admUser) {
-        logger.info('Administrador mestre identificado na base de dados.', { 
-          id: admUser.id, 
-          username: admUser.username,
-          hasPassword: !!admUser.password 
-        }, 'Auth');
-      } else {
-        logger.warn('AVISO: Nenhum administrador mestre foi encontrado na base de dados local!', null, 'Auth');
-      }
-
-      const isAdmAttempt = 
-        loginUsername.toUpperCase() === 'ADM' || 
-        loginUsername.toLowerCase() === 'admin' ||
-        (admUser && admUser.username.toUpperCase() === loginUsername.toUpperCase());
-      
-      if (!isOnline && !isAdmAttempt) {
-        setError('Conexão necessária para validar acesso deste usuário.');
-        return;
-      }
-
-      const user = usersFromStorage.find(u => 
-        (u.username && u.username.toUpperCase() === loginUsername.toUpperCase()) && 
-        verifyPassword(loginPassword, u.password || '')
-      );
-
-      // Log de tentativa de login
-      if (user) {
-        logger.info(`Usuário encontrado: ${user.username}`, { id: user.id }, 'Auth');
-        logger.info('Hash validado com sucesso.', null, 'Auth');
-      } else {
-        logger.warn(`Tentativa de login falhou: Usuário "${loginUsername}" não encontrado ou senha inválida.`, null, 'Auth');
-        
-        // --- FALLBACK DE EMERGÊNCIA ---
-        // Se não houver usuários cadastrados no banco, permitir login com admin/ADM1234
-        if (usersFromStorage.length === 0 && (loginUsername.toLowerCase() === 'admin' || loginUsername.toUpperCase() === 'ADM') && loginPassword === 'ADM1234') {
-          logger.warn('EMERGÊNCIA: Entrando com admin padrão (Banco Vazio)', null, 'Auth');
-          const emergencyAdmin: SystemUser = {
-            id: 'admin',
-            username: 'admin',
-            name: 'Administrador Mestre (Fallback)',
-            roleId: 'role-gerente',
-            isActive: true,
-            isFirstAccess: true
-          };
-          setCurrentUser(emergencyAdmin);
-          setIsLogged(true);
+      if (success && user) {
+        if (user.mustChangePassword) {
+          logger.info('Primeiro acesso detectado para o administrador.', null, 'Auth');
+          setCurrentUser(user); // Necessário para trocar a senha
           setView('first-access');
           return;
         }
-      }
 
-      if (user && user.isFirstAccess && isAdmAttempt && loginPassword === 'ADM1234') {
-        logger.info('Primeiro acesso detectado para o administrador.', null, 'Auth');
-        setView('first-access');
-        return;
-      }
+        setCurrentUser(user);
+        setIsLogged(true);
+        addActivity('auth', 'Login Realizado', `O usuário ${user.name} acessou o sistema.`);
 
-      if (user) {
-        if (user.isActive === false) {
-          setError('Usuário inativo. Entre em contato com o administrador.');
-          return;
-        }
-        
-        if (isOnline || isAdmAttempt) {
-          setCurrentUser(user);
-          setIsLogged(true);
-          addActivity('auth', 'Login Realizado', `O usuário ${user.name} acessou o sistema.`);
+        // Restaurar sessão de caixa do usuário
+        const sessionInOpenSessions = openSessions[user.id];
+        const isGlobalSessionForSameUser = cashierSession.isOpen && cashierSession.userId === user.id;
 
-          const sessionInOpenSessions = openSessions[user.id];
-          const isGlobalSessionForSameUser = cashierSession.isOpen && cashierSession.userId === user.id;
-
-          if (sessionInOpenSessions && sessionInOpenSessions.isOpen) {
-            setCashierSession(sessionInOpenSessions);
-          } else if (isGlobalSessionForSameUser) {
-            console.log("[Caixa] Mantendo sessão global ativa para usuário logado.");
-          } else {
-            setCashierSession({
-              id: '', isOpen: false, openedAt: '', openingBalance: 0, totalSales: 0, totalCanceled: 0, salesCount: 0, canceledCount: 0, salesByMethod: {}
-            });
-          }
-        } else {
-          setError('Conexão necessária para validar acesso deste usuário.');
+        if (sessionInOpenSessions && sessionInOpenSessions.isOpen) {
+          setCashierSession(sessionInOpenSessions);
+        } else if (!isGlobalSessionForSameUser) {
+          setCashierSession({
+            id: '', isOpen: false, openedAt: '', openingBalance: 0, totalSales: 0, totalCanceled: 0, salesCount: 0, canceledCount: 0, salesByMethod: {}
+          });
         }
       } else {
-        setError('Credenciais incorretas! Verifique seu usuário e senha.');
+        setError(loginError || 'Credenciais incorretas! Verifique seu usuário e senha.');
+        logger.warn(`Tentativa de login falhou para usuário "${loginUsername}": ${loginError}`, null, 'Auth');
       }
     } catch (err) {
       console.error("[Auth] Erro no login:", err);
@@ -3794,16 +3501,14 @@ useEffect(() => {
 
   const handleFirstAccessSetup = async () => {
     if (isSubmitting) return;
+    if (!currentUser) return;
+    
     setIsSubmitting(true);
     setError(null);
 
     try {
       await new Promise(resolve => setTimeout(resolve, 800));
 
-      if (!newAdmUsername || newAdmUsername.trim().length < 3) {
-        setError('O novo nome de usuário deve ter pelo menos 3 caracteres.');
-        return;
-      }
       if (!newAdmPassword || newAdmPassword.length < 4) {
         setError('A nova senha deve ter pelo menos 4 caracteres.');
         return;
@@ -3813,97 +3518,28 @@ useEffect(() => {
         return;
       }
 
-      const masterCode = Math.random().toString(36).substring(2, 10).toUpperCase();
-      const masterCodeHash = secureHash(masterCode);
-      setGeneratedMasterCode(masterCode);
+      const { success, user: updatedUser, error: changeError } = await performChangePassword(currentUser.id, loginPassword, newAdmPassword);
 
-      const newAdmin: SystemUser = {
-        id: 'admin',
-        username: newAdmUsername.toUpperCase(),
-        name: 'Administrador',
-        password: secureHash(newAdmPassword),
-        roleId: 'role-gerente',
-        isFirstAccess: false,
-        masterCode: masterCodeHash,
-        isActive: true
-      };
-
-      setUsers(prev => {
-        const filtered = prev.filter(u => u.id !== 'admin');
-        return [...filtered, newAdmin];
-      });
-
-      addActivity('security', 'Primeiro Acesso Concluído', `O administrador configurou novo login ${newAdmUsername.toUpperCase()} e senha.`);
-      setView('master-code-display');
+      if (success && updatedUser) {
+        addActivity('security', 'Primeiro Acesso Concluído', `O administrador alterou a senha padrão.`);
+        
+        setCurrentUser(updatedUser);
+        setIsLogged(true);
+        setView('dashboard');
+      } else {
+        setError(changeError || 'Erro ao alterar senha.');
+      }
     } catch (err) {
-      console.error("[Setup] Erro no primeiro acesso:", err);
-      setError('Erro ao configurar primeiro acesso.');
+      console.error("[Auth] Erro no setup de primeiro acesso:", err);
+      setError('Erro ao processar alteração de senha.');
     } finally {
       setIsSubmitting(false);
     }
   };
 
   const handlePasswordRecovery = async () => {
-    if (isSubmitting) return;
-    setIsSubmitting(true);
-    setError(null);
-
-    try {
-      await new Promise(resolve => setTimeout(resolve, 800));
-      const adm = users.find(u => u.id === 'admin' || u.username.toUpperCase() === 'ADM');
-      if (!adm || !adm.masterCode) {
-        setError('Sistema não configurado para recuperação. Entre em contato com suporte.');
-        return;
-      }
-
-      const inputHash = secureHash(recoveryMasterCodeInput.toUpperCase());
-      if (inputHash !== adm.masterCode) {
-        setError('Código Mestre Incorreto!');
-        return;
-      }
-
-      if (!recoveryNewPassword || recoveryNewPassword.length < 4) {
-        setError('A nova senha deve ter pelo menos 4 caracteres.');
-        return;
-      }
-
-      if (recoveryNewPassword !== recoveryConfirmPassword) {
-        setError('As senhas não coincidem!');
-        return;
-      }
-
-    // Gerar NOVO Código Mestre conforme solicitação
-    const newMasterCode = Math.random().toString(36).substring(2, 10).toUpperCase();
-    const newMasterCodeHash = secureHash(newMasterCode);
-    setGeneratedMasterCode(newMasterCode);
-
-    setUsers(prev => prev.map(u => {
-      if (u.id === 'admin') {
-        return { 
-          ...u, 
-          password: secureHash(recoveryNewPassword),
-          masterCode: newMasterCodeHash
-        };
-      }
-      return u;
-    }));
-
-    addActivity('security', 'Recuperação de Senha', 'A senha do administrador foi recuperada e um NOVO código mestre foi gerado.');
-    setError('Senha redefinida com sucesso! Salve seu novo código mestre.');
-    
-    // Ir para tela de exibição do código mestre
-    setView('master-code-display');
-    
-    // Limpar campos de recuperação
-    setRecoveryMasterCodeInput('');
-    setRecoveryNewPassword('');
-    setRecoveryConfirmPassword('');
-    } catch (err) {
-      console.error("[Recovery] Erro na recuperação:", err);
-      setError('Erro ao recuperar senha.');
-    } finally {
-      setIsSubmitting(false);
-    }
+    // Legacy recovery removed. Use Resetar Administrador.
+    alert("Funcionalidade de recuperação por código mestre desativada. Utilize o Resetar Administrador clicando 5 vezes no logo se necessário.");
   };
 
   const downloadMasterCodePDF = () => {
@@ -3980,8 +3616,6 @@ useEffect(() => {
   };
 
   const handleLogout = () => {
-    setIsLogged(false);
-    
     // Salva o estado do caixa atual na lista de sessões abertas antes de sair
     if (currentUser) {
       addActivity('auth', 'Logout Realizado', `O usuário ${currentUser.name} saiu do sistema.`);
@@ -4000,12 +3634,14 @@ useEffect(() => {
       }
     }
 
+    performLogout();
     setCurrentUser(null);
     setCashierSession({
       id: '', isOpen: false, openedAt: '', openingBalance: 0, totalSales: 0, totalCanceled: 0, salesCount: 0, canceledCount: 0, salesByMethod: {}
     });
     setLoginUsername('');
     setLoginPassword('');
+    setIsLogged(false);
     setView('dashboard');
   };
 
@@ -4512,19 +4148,10 @@ useEffect(() => {
                       </button>
                     </div>
                  </form>
-                 <div className="flex flex-col items-center gap-6 w-full pt-4">
-                    <button 
-                      onClick={() => setView('forgot-password')}
-                      className="text-[10px] font-black text-white/30 hover:text-purple-400 uppercase tracking-widest underline decoration-1 underline-offset-8 transition-colors"
-                    >
-                      Esqueceu as credenciais?
-                    </button>
-                 </div>
                  </>
                  )}
               </motion.div>
             )}
-
             {view === 'first-access' && (
               <motion.div 
                 key="first-access"
@@ -4538,7 +4165,7 @@ useEffect(() => {
                  </div>
                  <div className="text-center space-y-2">
                     <h2 className="text-xl font-black text-white uppercase tracking-tighter">Primeiro Acesso</h2>
-                    <p className="text-[10px] font-bold text-white/40 uppercase tracking-widest px-4">Por segurança, você deve alterar a senha padrão do administrador.</p>
+                    <p className="text-[10px] font-bold text-white/40 uppercase tracking-widest px-4">Por segurança, você deve alterar a senha padrão agora.</p>
                  </div>
                  <form 
                    onSubmit={(e) => {
@@ -4547,7 +4174,6 @@ useEffect(() => {
                    }}
                    className="w-full space-y-4"
                  >
-                    <Input label="Novo Login ADM" value={newAdmUsername} onChange={(v) => setNewAdmUsername(v.toUpperCase())} placeholder="Ex: ADMIN_MASTER" disabled={isSubmitting} />
                     <Input label="Nova Senha" value={newAdmPassword} onChange={setNewAdmPassword} type="password" placeholder="Mínimo 4 caracteres" disabled={isSubmitting} />
                     <Input label="Confirmar Senha" value={confirmAdmPassword} onChange={setConfirmAdmPassword} type="password" placeholder="Repita a senha" disabled={isSubmitting} />
                     <button 
@@ -4561,117 +4187,15 @@ useEffect(() => {
                           <span>Salvando...</span>
                         </>
                       ) : (
-                        'Salvar Alteração'
+                        'Salvar e Acessar'
                       )}
-                    </button>
-                    <button 
-                      type="button"
-                      disabled={isSubmitting}
-                      onClick={() => setView('dashboard')}
-                      className="w-full text-[10px] font-black text-white/40 uppercase tracking-widest pt-2 hover:text-white transition-colors disabled:opacity-30"
-                    >
-                      Cancelar e Sair
                     </button>
                  </form>
               </motion.div>
             )}
-
-            {view === 'master-code-display' && (
-              <motion.div 
-                key="master-code"
-                initial={{ opacity: 0, scale: 0.9 }} 
-                animate={{ opacity: 1, scale: 1 }}
-                className="glass-panel p-10 max-w-md w-full space-y-8 flex flex-col items-center shadow-2xl"
-              >
-                 <div className="w-20 h-20 bg-blue-600/20 text-blue-400 rounded-full flex items-center justify-center border border-blue-500/20 shadow-xl">
-                    <Check size={42} />
-                 </div>
-                 <div className="text-center space-y-4">
-                    <h2 className="text-xl font-black text-white uppercase tracking-tighter">Segurança Configurada!</h2>
-                    <p className="text-[10px] font-bold text-white/40 uppercase tracking-widest leading-relaxed">
-                      Geramos seu <span className="text-blue-400 font-black">CÓDIGO MESTRE</span> único. Ele é essencial para recuperar sua conta caso esqueça a senha.
-                    </p>
-                 </div>
-
-                 <div className="w-full bg-white/5 p-8 rounded-3xl border border-white/10 text-center space-y-4 shadow-inner">
-                    <p className="text-[9px] font-black text-white/20 uppercase tracking-widest">Código Gerado:</p>
-                    <p className="text-4xl font-black text-white tracking-[0.3em] font-mono drop-shadow-[0_0_15px_rgba(255,255,255,0.4)]">{generatedMasterCode}</p>
-                 </div>
-
-                 <div className="w-full space-y-4">
-                    <button 
-                      onClick={downloadMasterCodePDF}
-                      className="glass-button-primary w-full p-5"
-                    >
-                      <Download size={18} />
-                      Baixar PDF de Segurança
-                    </button>
-                    
-                    <div className="p-4 bg-red-500/10 border border-red-500/20 rounded-2xl">
-                      <p className="text-[8px] font-black text-red-400 uppercase text-center leading-tight">
-                        Atenção: Este código será exibido apenas esta vez. Salve o arquivo ou anote o código.
-                      </p>
-                    </div>
-
-                    <button 
-                      onClick={() => {
-                        alert('Certifique-se de que salvou seu código mestre!');
-                        setView('dashboard');
-                        setIsLogged(false);
-                      }}
-                      className="w-full bg-white/5 text-white/30 p-5 rounded-2xl font-black text-xs uppercase tracking-[0.2em] border border-white/10 hover:bg-white/10 transition-all active:scale-95"
-                    >
-                      Concluir e Voltar ao Login
-                    </button>
-                 </div>
-              </motion.div>
-            )}
-
-            {view === 'forgot-password' && (
-              <motion.div 
-                key="recovery"
-                initial={{ opacity: 0, y: 20 }} 
-                animate={{ opacity: 1, y: 0 }} 
-                exit={{ opacity: 0, y: 20 }}
-                className="glass-panel p-10 max-w-md w-full space-y-8 flex flex-col items-center shadow-2xl"
-              >
-                 <div className="w-20 h-20 bg-blue-600/20 text-blue-400 rounded-full flex items-center justify-center border border-blue-500/20 shadow-xl">
-                    <RotateCcw size={32} />
-                 </div>
-                 <div className="text-center space-y-2">
-                    <h2 className="text-xl font-black text-white uppercase tracking-tighter">Recuperar Senha</h2>
-                    <p className="text-[10px] font-bold text-white/40 uppercase tracking-widest px-4">Utilize seu Código Mestre para definir uma nova senha para ADM.</p>
-                 </div>
-                 <div className="w-full space-y-4">
-                    <Input label="Código Mestre" value={recoveryMasterCodeInput} onChange={(v) => setRecoveryMasterCodeInput(v.toUpperCase())} placeholder="Ex: XJ83K2" disabled={isSubmitting} />
-                    <Input label="Nova Senha" value={recoveryNewPassword} onChange={setRecoveryNewPassword} type="password" placeholder="****" disabled={isSubmitting} />
-                    <Input label="Confirmar Senha" value={recoveryConfirmPassword} onChange={setRecoveryConfirmPassword} type="password" placeholder="****" disabled={isSubmitting} />
-                    <button 
-                      onClick={handlePasswordRecovery}
-                      disabled={isSubmitting}
-                      className="glass-button-primary w-full p-5 flex items-center justify-center gap-2 disabled:opacity-50"
-                    >
-                      {isSubmitting ? (
-                        <>
-                          <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                          <span>Redefinindo...</span>
-                        </>
-                      ) : (
-                        'Redefinir Senha'
-                      )}
-                    </button>
-                    <button 
-                      onClick={() => setView('dashboard')}
-                      className="w-full text-[10px] font-black text-white/40 uppercase tracking-widest pt-2 hover:text-white transition-colors"
-                    >
-                      Voltar ao Login
-                    </button>
-                  </div>
-               </motion.div>
-             )}
-           </AnimatePresence>
-         </div>
-       ) : null}
+          </AnimatePresence>
+        </div>
+      ) : null}
       {/* Mobile Drawer Backdrop */}
       <AnimatePresence>
         {(isMobileMenuOpen || isRightDrawerOpen) && (
@@ -5032,6 +4556,7 @@ useEffect(() => {
                   setClosedSessions={setClosedSessions}
                   addActivity={addActivity}
                   users={users}
+                  roles={roles}
                   couponConfig={couponConfig}
                   imprimirCupom={imprimirCupom}
                   canEdit={permissions.pdv.edit}
@@ -5210,9 +4735,6 @@ useEffect(() => {
                   setPreOrders={setPreOrders}
                   preOrders={preOrders}
                   setOpenSessions={setOpenSessions}
-                  verifyPassword={verifyPassword}
-                  secureHash={secureHash}
-                  isHashed={isHashed}
                   setOrderCounter={setOrderCounter}
                   labelLot={labelLot}
                   setLabelLot={setLabelLot}
@@ -6390,9 +5912,6 @@ function SettingsView({
   setPreOrders,
   preOrders,
   setOpenSessions,
-  verifyPassword,
-  secureHash,
-  isHashed,
   setOrderCounter,
   labelLot,
   setLabelLot,
@@ -6490,9 +6009,6 @@ function SettingsView({
   setPreOrders: (p: any[]) => void,
   preOrders: any[],
   setOpenSessions: (s: any) => void,
-  verifyPassword: (input: string, stored: string) => boolean,
-  secureHash: (str: string) => string,
-  isHashed: (str: string) => boolean,
   setOrderCounter: (val: number) => void,
   labelLot: {product: Product, quantity: number, selected: boolean}[],
   setLabelLot: (l: any[]) => void,
@@ -6631,12 +6147,8 @@ function SettingsView({
   const [pendingAction, setPendingAction] = useState<{ id: string; type: 'restore' | 'delete' } | null>(null);
 
   const confirmSystemReset = async () => {
-    // 1. Verify admin password
-    const adminUser = users.find(u => u.id === 'admin' || u.username.toUpperCase() === 'ADM');
-    const isAdmSetupDone = adminUser && isHashed(adminUser.password || '') && !adminUser.isFirstAccess;
-    const isPasswordCorrect = isAdmSetupDone 
-      ? verifyPassword(adminPasswordInput, adminUser!.password || '') 
-      : adminPasswordInput === 'ADM1234';
+    // 1. Verify admin/user identity via performLogin
+    const { success: isPasswordCorrect } = await performLogin(currentUser?.username || '', adminPasswordInput);
 
     if (!isPasswordCorrect) {
       alert('Senha do administrador inválida.');
@@ -6715,9 +6227,10 @@ function SettingsView({
       setOrderCounter(0);
 
       // 5. Reset Users (Keep Admin)
-      if (adminUser) {
-        setUsers([adminUser]);
-        salvarDados(STORAGE_KEYS.USERS, [adminUser]);
+      const adm = users.find(u => u.id === 'admin' || u.username.toUpperCase() === 'ADM');
+      if (adm) {
+        setUsers([adm]);
+        salvarDados(STORAGE_KEYS.USERS, [adm]);
       }
 
       setShowResetSystemModal(false);
@@ -7039,19 +6552,23 @@ function SettingsView({
     }
   };
 
-  const addUser = () => {
+  const addUser = async () => {
     if (!newUser.username || !newUser.name) return;
-    const user: SystemUser = {
-      id: crypto.randomUUID(),
+    const { success, user, error: createError } = await performCreateUser({
       username: newUser.username,
       name: newUser.name,
-      password: newUser.password ? secureHash(newUser.password) : undefined,
+      password: newUser.password || '1234',
       roleId: newUser.roleId,
       isActive: true
-    };
-    setUsers([...users, user]);
-    addActivity('security', 'Cadastro de Usuário', `Novo usuário ${user.name} (@${user.username}) cadastrado.`);
-    setNewUser({ name: '', username: '', password: '', roleId: '' });
+    });
+    
+    if (success && user) {
+      setUsers([...users, user]);
+      addActivity('security', 'Cadastro de Usuário', `Novo usuário ${user.name} (@${user.username}) cadastrado.`);
+      setNewUser({ name: '', username: '', password: '', roleId: '' });
+    } else {
+      alert(createError || 'Erro ao criar usuário.');
+    }
   };
 
   const addRole = () => {
@@ -7084,16 +6601,15 @@ function SettingsView({
     }));
   };
 
-  const confirmDeleteRole = () => {
+  const confirmDeleteRole = async () => {
     if (!roleToDeleteId) return;
     
-    const adminUser = users.find(u => u.id === 'admin' || u.username.toUpperCase() === 'ADM');
-    const isAdmSetupDone = adminUser && isHashed(adminUser.password || '') && !adminUser.isFirstAccess;
-    
-    const isUserPassword = currentUser && verifyPassword(deleteRolePasswordValue, currentUser.password || '');
-    const isMasterPassword = !isAdmSetupDone && deleteRolePasswordValue === 'ADM1234';
+    // Simplificando verificação: apenas admin/dono logado pode excluir papel OU qualquer admin logado que confirme sua senha
+    // Na prática, se o botão está habilitado, canEdit() já foi checado.
+    // O modal pede a senha do usuário ATUAL para confirmar a ação.
+    const isPasswordCorrect = currentUser && await performCheckPassword(currentUser.id, deleteRolePasswordValue);
 
-    if (!isUserPassword && !isMasterPassword) {
+    if (!isPasswordCorrect) {
        alert('Senha incorreta!');
        return;
     }
@@ -8928,7 +8444,7 @@ function SettingsView({
                           Cancelar
                         </button>
                         <button 
-                          onClick={() => {
+                          onClick={async () => {
                             if (newPassword !== confirmPassword) {
                               alert('As senhas não coincidem!');
                               return;
@@ -8937,9 +8453,18 @@ function SettingsView({
                               alert('Senha muito curta!');
                               return;
                             }
-                            setUsers(users.map(u => u.id === resettingUser.id ? { ...u, password: secureHash(newPassword) } : u));
-                            addActivity('security', 'Senha Redefinida', `Senha do usuário ${resettingUser.name} foi redefinida manualmente.`);
-                            alert('Senha redefinida com sucesso');
+                            if (!resettingUser) return;
+
+                            const { success: resetSuccess, user: updatedUser, error: resetError } = await performUpdateUser(resettingUser.id, { password: newPassword });
+                            
+                            if (resetSuccess && updatedUser) {
+                              setUsers(users.map(u => u.id === resettingUser.id ? updatedUser : u));
+                              addActivity('security', 'Senha Redefinida', `Senha do usuário ${resettingUser.name} foi redefinida manualmente.`);
+                              alert('Senha redefinida com sucesso');
+                            } else {
+                              alert(resetError || 'Erro ao redefinir senha.');
+                            }
+
                             setShowResetModal(false);
                             setResettingUser(null);
                             setNewPassword('');
@@ -14513,6 +14038,7 @@ function CashierView({
   canEdit,
   currentUser,
   setView,
+  roles,
   redirectAfterCashier,
   setRedirectAfterCashier
 }: { 
@@ -14523,6 +14049,7 @@ function CashierView({
   setClosedSessions: any,
   addActivity: (type: Activity['type'], action: string, details: string, extra?: Partial<Activity>) => void,
   users: SystemUser[],
+  roles: Role[],
   couponConfig: CouponConfig,
   imprimirCupom: (sale: Sale | string) => Promise<boolean>,
   canEdit: boolean,
@@ -14608,20 +14135,34 @@ function CashierView({
     window.print();
   };
 
-  const handleCloseCashier = () => {
-    const adminUser = users.find(u => u.id === 'admin' || u.username.toUpperCase() === 'ADM');
-    const isAdmSetupDone = adminUser && isHashed(adminUser.password || '') && !adminUser.isFirstAccess;
+  const handleCloseCashier = async () => {
+    // Para fechar o caixa, exigimos a senha do usuário ATUAL ou de um administrador.
+    // Verificamos se a senha fornecida bate com algum usuário que tenha permissão de fechar (ou o próprio dono do caixa).
     
-    const matchedUser = users.find(u => verifyPassword(passwordInput, u.password || ''));
-    const isMasterPassword = !isAdmSetupDone && passwordInput === 'ADM1234';
+    let userValidated = null;
+    
+    // 1. Tentar validar contra o usuário logado (mais comum)
+    const isCurrentUserValid = currentUser && await performCheckPassword(currentUser.id, passwordInput);
+    if (isCurrentUserValid) {
+      userValidated = currentUser;
+    } else {
+      // 2. Se falhar, tentar contra qualquer administrador (loop assíncrono rápido pois são poucos usuários geralmente)
+      for (const u of users) {
+        if (isUserAdmin(u, roles)) {
+          if (await performCheckPassword(u.id, passwordInput)) {
+            userValidated = u;
+            break;
+          }
+        }
+      }
+    }
 
-    if (!matchedUser && !isMasterPassword) {
-      alert('Senha inválida!');
+    if (!userValidated) {
+      alert('Senha inválida ou sem permissão para fechar o caixa!');
       return;
     }
 
-    const user = matchedUser || (isMasterPassword ? adminUser : null);
-    const userName = user?.name || 'Administrador';
+    const userName = userValidated.name;
 
     // Recalculate totals based on actual sales linked to this session
     const sessionSales = sales.filter(s => s.cashierSessionId === cashierSession.id && s.status !== 'cancelado');
@@ -14641,7 +14182,7 @@ function CashierView({
     const closedSession: CashierSession = {
       ...cashierSession,
       isOpen: false,
-      userId: user?.id,
+      userId: userValidated?.id,
       userName: userName,
       closedAt: new Date().toLocaleString('pt-BR'),
       totalSales: totalSalesCalculated,
