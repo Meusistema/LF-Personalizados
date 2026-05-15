@@ -402,6 +402,30 @@ ipcMain.handle('get-system-paths', () => {
   };
 });
 
+ipcMain.handle('reset-system', async () => {
+  console.log('[Electron] [IPC] reset-system chamado. Deletando backups...');
+  try {
+    if (fs.existsSync(backupPath)) {
+      fs.unlinkSync(backupPath);
+      console.log('[Electron] Backup principal deletado.');
+    }
+    
+    // Opcional: deletar backups automáticos nos documentos também? 
+    // Provavelmente melhor sim para garantir reset total.
+    if (fs.existsSync(documentsBackupDir)) {
+      const files = fs.readdirSync(documentsBackupDir);
+      for (const file of files) {
+        fs.unlinkSync(path.join(documentsBackupDir, file));
+      }
+      console.log('[Electron] Backups em Documentos deletados.');
+    }
+    return { success: true };
+  } catch (error) {
+    console.error('[Electron] Erro ao resetar sistema:', error);
+    return { success: false, error: error.message };
+  }
+});
+
 ipcMain.handle('check-for-updates', async () => {
   console.log('[Electron] [IPC] check-for-updates chamado');
   if (isDev) return { success: false, message: 'Não disponível em modo desenvolvimento' };

@@ -9,6 +9,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   print: (content, options) => ipcRenderer.invoke('print', content, options),
   getAppVersion: () => ipcRenderer.invoke('get-app-version'),
   getSystemPaths: () => ipcRenderer.invoke('get-system-paths'),
+  resetSystem: () => ipcRenderer.invoke('reset-system'),
   writeLog: (logEntry) => ipcRenderer.invoke('write-log', logEntry),
   checkForUpdates: () => ipcRenderer.invoke('check-for-updates'),
   downloadUpdate: () => ipcRenderer.invoke('download-update'),

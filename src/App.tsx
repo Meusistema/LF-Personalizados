@@ -1441,18 +1441,29 @@ export default function App() {
           // Limpa LocalStorage
           localStorage.clear();
           
-          // Limpa IndexedDB via Dexie
-          import('./lib/db').then(async ({ db }) => {
+          const performReset = async () => {
+            // Limpa Backups no Electron se disponível
+            if ((window as any).electronAPI?.resetSystem) {
+              await (window as any).electronAPI.resetSystem();
+            }
+
+            // Limpa IndexedDB via Dexie
+            const { db } = await import('./lib/db');
             try {
+              // Mark as not cleaning during surgical cleanup to avoid interference
+              localStorage.setItem('__SYSTEM_CLEANED_PROD_V6__', 'true');
+              
               await db.delete();
               alert("Sistema resetado com sucesso! O aplicativo será reiniciado.");
               window.location.reload();
             } catch (err) {
               console.error("Erro ao deletar banco:", err);
-              // Fallback se falhar o delete()
-              alert("Erro ao limpar banco de dados. Por favor, apague a pasta indicada manualmente.");
+              alert("Ocorreu um erro parcial. Reiniciando para aplicar mudanças do LocalStorage.");
+              window.location.reload();
             }
-          });
+          };
+
+          performReset();
         }
         return 0;
       }
@@ -3338,7 +3349,7 @@ useEffect(() => {
         updatedAt: Date.now()
       };
       validatedUsers = [defaultAdmin];
-      salvarDados(STORAGE_KEYS.USERS, validatedUsers);
+      await salvarDadosAsync(STORAGE_KEYS.USERS, validatedUsers);
       logger.info('Administrador padrão criado com sucesso.', { username: 'admin' }, 'Segurança');
     } else {
       logger.info('Administrador encontrado.', { username: adminUser.username }, 'Segurança');
@@ -3721,7 +3732,7 @@ useEffect(() => {
         
         // --- FALLBACK DE EMERGÊNCIA ---
         // Se não houver usuários cadastrados no banco, permitir login com admin/ADM1234
-        if (users.length === 0 && (loginUsername.toLowerCase() === 'admin' || loginUsername.toUpperCase() === 'ADM') && loginPassword === 'ADM1234') {
+        if (usersFromStorage.length === 0 && (loginUsername.toLowerCase() === 'admin' || loginUsername.toUpperCase() === 'ADM') && loginPassword === 'ADM1234') {
           logger.warn('EMERGÊNCIA: Entrando com admin padrão (Banco Vazio)', null, 'Auth');
           const emergencyAdmin: SystemUser = {
             id: 'admin',
