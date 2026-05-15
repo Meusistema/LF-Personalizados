@@ -1,0 +1,8 @@
+{
+  "name": "LukasFe3D",
+  "description": "Sistema de gestão de vendas, estoque e clientes com calculadora de custos profissional integrada.",
+  "requestFramePermissions": [
+    "camera"
+  ],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

@@ -1,0 +1,35 @@
+node_modules/
+dist/
+release/
+dist_electron/
+build/
+bin/
+obj/
+
+# Electron artifacts
+*.exe
+*.blockmap
+*.pak
+*.asar
+snapshot_blob.bin
+v8_context_snapshot.bin
+latest.yml
+latest-mac.yml
+project-local.yml
+
+# Android/iOS artifacts
+android/app/build/
+android/.gradle/
+android/app/src/main/assets/public/
+ios/App/public/
+ios/App/App/public/
+capacitor.config.json
+
+# Environment
+.env*
+!.env.example
+
+# Logs and OS files
+*.log
+.DS_Store
+Thumbs.db

@@ -1,0 +1,287 @@
+3274:                <button 
+3282:                <button 
+3290:                <button 
+3318:              <button className="absolute inset-y-0 right-0 pr-4 flex items-center text-white/40 hover:text-white transition-colors">
+3346:                <button onClick={() => setIsMobileMenuOpen(false)} className="p-2 text-white/40 hover:text-white hover:bg-white/10 rounded-lg transition-colors">
+3352:                <button 
+3363:                   <button 
+3407:                <button 
+3417:                  <button 
+3432:                  <button 
+3447:                  <button 
+3462:                  <button 
+3478:                <button 
+3498:                 <button 
+3559:                      <button 
+3576:                    <button 
+3611:                    <button 
+3625:                    <button 
+3660:                    <button 
+3674:                    <button 
+3707:                    <button 
+3721:                    <button 
+3763:                <button
+3811:                  <button 
+3825:                  <button 
+4303:          <button 
+4313:          <button 
+4324:            <button 
+4335:          <button 
+4345:          <button 
+4371:            <button onClick={() => setError(null)} className="ml-4 w-6 h-6 rounded-full bg-white/10 flex items-center justify-center hover:bg-white/20 transition-colors">
+4485:          <button 
+4504:          <button 
+4512:          <button 
+4520:          <button 
+4573:              <button 
+4763:          <button 
+4785:            <button
+4831:                    <button 
+4858:                  <button 
+4974:          <button 
+5009:                  <button 
+5055:                  <button 
+5082:                        <button 
+5089:                        <button 
+5140:                    <button 
+6014:          <button 
+6037:            <button 
+6067:            <button 
+6074:              <button 
+6089:           <button 
+6096:            <button 
+6285:                 <button
+6356:                      <button 
+6418:                      <button 
+6478:                      <button 
+6504:                          <button 
+6529:                                <button 
+6551:                                <button 
+6577:                            <button 
+6590:                            <button 
+6627:                        <button 
+6673:                           <button onClick={() => setLocalLabel({...localLabel, sheetType: 'a4', paperWidth: 210, paperHeight: 297, width: 50, height: 30, format: 'a4'})} className={`p-2.5 rounded-lg border flex flex-col items-center gap-1 transition-all ${localLabel.sheetType === 'a4' ? 'bg-blue-600/20 border-blue-500/50 text-blue-400' : 'bg-white/5 border-white/5 text-zinc-400 hover:bg-white/10'}`}>
+6677:                           <button onClick={() => setLocalLabel({...localLabel, sheetType: 'a6', paperWidth: 105, paperHeight: 148, width: 50, height: 30, format: 'a6'})} className={`p-2.5 rounded-lg border flex flex-col items-center gap-1 transition-all ${localLabel.sheetType === 'a6' ? 'bg-blue-600/20 border-blue-500/50 text-blue-400' : 'bg-white/5 border-white/5 text-zinc-400 hover:bg-white/10'}`}>
+6681:                           <button onClick={() => setLocalLabel({...localLabel, sheetType: 'thermal', paperWidth: 58, paperHeight: 0, width: 50, height: 30, format: 'thermal'})} className={`p-2.5 rounded-lg border flex flex-col items-center gap-1 transition-all ${localLabel.sheetType === 'thermal' && localLabel.paperWidth === 58 ? 'bg-blue-600/20 border-blue-500/50 text-blue-400' : 'bg-white/5 border-white/5 text-zinc-400 hover:bg-white/10'}`}>
+6685:                           <button onClick={() => setLocalLabel({...localLabel, sheetType: 'thermal', paperWidth: 80, paperHeight: 0, width: 50, height: 30, format: 'thermal'})} className={`p-2.5 rounded-lg border flex flex-col items-center gap-1 transition-all ${localLabel.sheetType === 'thermal' && localLabel.paperWidth === 80 ? 'bg-blue-600/20 border-blue-500/50 text-blue-400' : 'bg-white/5 border-white/5 text-zinc-400 hover:bg-white/10'}`}>
+6689:                           <button 
+6762:                        <button className="px-6 py-3.5 bg-zinc-800 text-zinc-400 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-zinc-700 transition-all shadow-lg active:scale-95">
+6765:                        <button 
+6777:                        <button 
+7039:                <button
+7064:                    <button 
+7074:                    <button 
+7084:                    <button 
+7122:                          <button 
+7200:                                       <button 
+7213:                                       <button 
+7227:                                       <button 
+7270:                           <button 
+7281:                             <button 
+7308:                         <button 
+7366:                                       <button 
+7382:                     <button 
+7470:                        <button 
+7518:                        <button 
+7527:                        <button 
+7572:                        <button 
+7583:                        <button 
+7641:                        <button 
+7651:                        <button 
+7696:                      <button 
+7705:                      <button 
+7769:                        <button 
+7778:                        <button 
+7884:                       <button 
+7915:                         <button 
+7921:                         <button 
+7960:                    <button 
+8007:                  <button 
+8050:                            <button
+8155:                  <button 
+8202:                  <button 
+8261:                        <button 
+8319:                <button 
+8333:                <button 
+8361:                <button 
+8399:                             <button 
+8409:                             <button 
+8418:                            <button 
+8425:                            <button 
+8432:                            <button 
+8475:                  <button
+8528:                                            <button 
+8562:    <button 
+8647:               <button 
+8653:               <button 
+8937:          <button 
+8954:          <button 
+8973:            <button 
+8984:                <button 
+9015:                      <button onClick={() => setShowIconSelector({ open: false })} className="p-2 hover:bg-white/10 rounded-xl">
+9022:                            <button 
+9038:              <button 
+9127:                        <button 
+9166:                            <button 
+9178:                              <button 
+9210:        <button className="hidden sm:flex items-center gap-2 text-indigo-400 hover:text-indigo-300 transition-all text-[9px] font-black uppercase tracking-widest group">
+9271:        <button onClick={onClose} className="absolute top-8 right-8 p-2 text-zinc-500 hover:text-red-500 hover:bg-red-500/10 rounded-xl transition-all">
+9300:            <button 
+9307:            <button 
+9314:            <button onClick={onClose} className="w-full p-3 text-zinc-500 font-black text-[9px] uppercase tracking-[0.2em] hover:text-zinc-300 transition-all">
+9740:                <button 
+9746:                <button 
+9761:          <button 
+9774:            <button 
+9782:            <button 
+9828:          <button 
+9837:            <button 
+9847:          <button 
+9917:                <button 
+9954:                <button 
+9965:                <button className="w-10 h-10 md:w-8 md:h-8 bg-white/5 text-white/20 rounded-xl md:rounded-lg flex items-center justify-center hover:bg-white/10 hover:text-white transition-all border border-white/5">
+9976:                <button 
+10000:          <button 
+10010:              <button 
+10024:          <button 
+10051:                <button onClick={() => setShowCategoryManager(false)} className="p-2 hover:bg-white/10 rounded-xl transition-colors">
+10066:                    <button 
+10077:                        <button onClick={(e) => { e.stopPropagation(); removeCategory(c.id); }} className="text-white/40 hover:text-red-400 transition-colors">
+10098:                    <button onClick={addSubcategory} disabled={!selectedCatId} className="bg-cyan-500 text-black px-6 rounded-xl font-bold hover:bg-cyan-400 transition-all active:scale-95 disabled:opacity-30">
+10108:                          <button onClick={() => removeSubcategory(s.id)} className="text-white/20 hover:text-red-400 transition-colors">
+10138:              <button 
+10198:                      <button 
+10216:                    <button 
+10250:                  <button 
+10257:                  <button 
+10368:        <button 
+10375:        <button 
+10581:        <button 
+10603:          <button 
+10630:              <button 
+10806:                               <button 
+10865:                        <button 
+10871:                        <button 
+10879:                      <button 
+10891:                    <button 
+10900:                  <button className="bg-[#5d5dff] text-white px-8 py-4 rounded-xl font-black text-[10px] uppercase tracking-widest hover:bg-blue-700 shadow-lg shadow-blue-500/20 transition-all flex items-center gap-2">
+10937:              <button 
+10944:                <button 
+11022:                              <button 
+11032:                              <button 
+11201:              <button onClick={onClose} className="p-2 hover:bg-zinc-800 rounded-full text-zinc-500 transition-all">
+11326:                             <button 
+11456:          <button 
+11462:          <button 
+11789:          <button 
+11859:            <button 
+11866:            <button 
+11893:          <button 
+12006:            <button 
+12016:               <button 
+12027:            <button 
+12036:            <button 
+12171:            <button
+12259:                        <button onClick={() => setSelectedSale(sale)} className="p-2 text-[#64748b] hover:text-blue-400 transition-colors flex items-center gap-1 text-[9px] font-black uppercase tracking-widest"><Eye size={12} /> Abrir</button>
+12299:                       <button 
+12306:                       <button onClick={(e) => { e.stopPropagation(); setSelectedSale(sale); }} className="w-9 h-9 rounded-xl bg-blue-600 flex items-center justify-center text-white"><Eye size={14} /></button>
+12686:          <button 
+12708:        <button 
+12720:              <button 
+12733:              <button 
+12804:                            <button 
+12829:                  <button 
+12874:                    <button 
+12903:                              <button 
+12984:                        <button 
+12993:                           <button 
+13000:                             <button 
+13007:                             <button 
+13037:              <button 
+13045:              <button 
+13061:          <button 
+13068:          <button className="w-10 h-10 rounded-xl bg-[#161d2f] flex items-center justify-center active:scale-90 transition-all">
+13077:            <button 
+13091:            <button 
+13120:            <button className="absolute inset-y-0 right-4 flex items-center text-gray-500 hover:text-white transition-colors">
+13134:                    <button 
+13156:                <button 
+13192:              <button 
+13266:                <button 
+13272:                <button 
+13310:                        <button onClick={() => removePayment(idx)} className="text-gray-500">
+13324:          <button 
+13332:          <button 
+13340:            <button 
+13349:          <button 
+13357:          <button 
+13406:              <button 
+13423:                  <button onClick={() => setIsRegistering(false)} className={`flex-1 py-3 rounded-xl text-[10px] font-black uppercase transition-all ${!isRegistering ? 'bg-purple-600 text-white shadow-lg shadow-purple-600/30' : 'text-white/40 hover:text-white'}`}>Pesquisar</button>
+13424:                  <button onClick={() => setIsRegistering(true)} className={`flex-1 py-3 rounded-xl text-[10px] font-black uppercase transition-all ${isRegistering ? 'bg-purple-600 text-white shadow-lg shadow-purple-600/30' : 'text-white/40 hover:text-white'}`}>Novo Cliente</button>
+13444:                          <button 
+13498:              <button 
+13535:                      <button 
+13542:                        <button 
+13571:                          <button 
+13588:                              <button 
+13598:                                <button 
+13711:          <button 
+13727:        <button 
+13739:        <button 
+13750:        <button 
+13761:        <button 
+13790:                      <button 
+13861:                <button onClick={() => setShowMethodsModal(false)} className="p-3 bg-slate-800 text-slate-400 rounded-xl hover:text-white hover:bg-slate-700 transition-colors">
+13877:                  <button 
+13900:                            <button 
+13908:                            <button 
+13928:                <button 
+14122:          <button onClick={() => setReportData(null)} className="absolute -top-4 -right-4 bg-zinc-900 text-zinc-500 p-2 rounded-full hover:text-red-500 shadow-sm border border-zinc-800"><X size={16} /></button>
+14175:          <button onClick={handlePrintReport} className="flex-1 bg-zinc-900 text-zinc-100 p-4 rounded-2xl font-black text-[10px] uppercase border border-zinc-800 flex items-center justify-center gap-2 shadow-sm hover:bg-zinc-800">
+14178:          <button onClick={() => setReportData(null)} className="flex-1 bg-blue-600 text-white p-4 rounded-2xl font-black text-[11px] uppercase tracking-widest hover:bg-blue-700 transition-all shadow-lg shadow-blue-500/20">Sair</button>
+14209:            <button 
+14264:          <button 
+14288:                  <button onClick={() => setShowCloseConfirm(false)} className="flex-1 py-5 rounded-2xl bg-white/5 text-white/40 border border-white/10 font-black text-[10px] uppercase hover:bg-white/10 hover:text-white transition-all">Cancelar</button>
+14289:                  <button onClick={handleCloseCashier} className="flex-1 py-5 rounded-2xl bg-blue-600 text-white font-black text-[10px] uppercase shadow-lg shadow-blue-600/20 border border-blue-500 hover:bg-blue-500 active:scale-95 transition-all">CONFIRMAR</button>
+14341:          <button 
+14406:                       <button 
+14449:                <button 
+14510:                 <button onClick={() => setSelectedSession(null)} className="flex-1 py-4 rounded-2xl bg-zinc-800 text-zinc-100 font-black text-[10px] uppercase tracking-widest hover:bg-zinc-700 transition-all">Sair</button>
+14633:        <button 
+14675:            <button 
+14777:        <button 
+14812:            <button 
+14855:        <button 
+14930:                          <button 
+14951:          <button className="w-8 h-8 rounded-lg border border-[#334155] flex items-center justify-center bg-transparent cursor-pointer disabled:opacity-20" disabled>
+14954:          <button className="w-8 h-8 rounded-lg bg-blue-600 border-none flex items-center justify-center font-black text-[10px] text-white">1</button>
+14955:          <button className="w-8 h-8 rounded-lg border border-[#334155] flex items-center justify-center bg-transparent cursor-pointer">
+14971:                 <button onClick={() => setSelectedSaleId(null)} className="w-12 h-12 rounded-xl bg-white/5 flex items-center justify-center hover:bg-white/10 transition-all text-white/50 hover:text-white">
+15034:                        <button 
+15041:                        <button 
+15049:                      <button 
+15060:                    <button 
+15070:                    <button 
+15427:          <button 
+15458:              <button 
+15466:            <button 
+15535:                <button 
+15682:        <button 
+15717:                  <button 
+15723:                  <button 
+15738:             <button 
+15751:             <button 
+15771:              <button 
+15782:            <button className="hidden lg:block p-4 bg-[#1a1625] rounded-xl border border-white/[0.03] hover:bg-[#2a2440] transition-colors text-gray-400 hover:text-white shadow-lg">
+15785:            <button className="hidden lg:block p-4 bg-[#1a1625] rounded-xl border border-white/[0.03] hover:bg-[#2a2440] transition-colors text-gray-400 hover:text-white shadow-lg">
+15788:            <button 
+15852:                             <button 
+15863:                            <button 
+15876:                            <button 
+15974:                        <button 
+16011:              <button 
+16053:           <button 
+16074:             <button 
+16136:                    <button 
+16146:                    <button 
+16308:          <button 

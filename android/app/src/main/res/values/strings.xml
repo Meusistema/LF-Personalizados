@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">LukasFe3D Hub</string>
+    <string name="title_activity_main">LukasFe3D Hub</string>
+    <string name="package_name">com.lukasfe3d.hub</string>
+    <string name="custom_url_scheme">com.lukasfe3d.hub</string>
+</resources>
